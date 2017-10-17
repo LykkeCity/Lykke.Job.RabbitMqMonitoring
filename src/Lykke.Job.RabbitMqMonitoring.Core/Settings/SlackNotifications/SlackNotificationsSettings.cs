@@ -1,4 +1,4 @@
-namespace Lykke.Job.RabbitMqMonitoring.Core.Settings.SlackNotifications
+﻿namespace Lykke.Job.RabbitMqMonitoring.Core.Settings.SlackNotifications
 {
     public class SlackNotificationsSettings
     {

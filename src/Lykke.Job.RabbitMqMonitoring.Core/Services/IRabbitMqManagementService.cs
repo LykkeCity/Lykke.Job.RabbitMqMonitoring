@@ -5,6 +5,6 @@ namespace Lykke.Job.RabbitMqMonitoring.Core.Services
 {
     public interface IRabbitMqManagementService
     {
-        Task<RabbitMqQueue[]> GetQueues(string url, string username, string password);
+        Task<RabbitMqQueue[]> GetQueuesAsync(string url, string username, string password);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Common;
@@ -31,21 +32,30 @@ namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
 
         public override async Task Execute()
         {
+            var tasks = new List<Task>();
+
             foreach (var rabbitMq in _rabbitMqConnections)
             {
-                try
-                {
-                    var queues = await _rabbitMqManagementService.GetQueues(rabbitMq.Url, rabbitMq.Username, rabbitMq.Password);
+                tasks.Add(ProcessConnection(rabbitMq));
+            }
 
-                    foreach (var queue in queues.Where(item => item.Messages >= _maxMessagesCount))
-                    {
-                        await _log.WriteMonitorAsync(new Uri(rabbitMq.Url).Host, string.Empty, string.Empty, $"Queue '{queue.Name}' contains {queue.Messages} messages");
-                    }
-                }
-                catch (Exception ex)
+            await Task.WhenAll(tasks);
+        }
+
+        private async Task ProcessConnection(RabbitMqConnection rabbitMq)
+        {
+            try
+            {
+                var queues = await _rabbitMqManagementService.GetQueuesAsync(rabbitMq.Url, rabbitMq.Username, rabbitMq.Password);
+
+                foreach (var queue in queues.Where(item => item.Messages >= _maxMessagesCount))
                 {
-                    await _log.WriteErrorAsync(nameof(Execute), rabbitMq.Url, ex);
+                    await _log.WriteMonitorAsync(new Uri(rabbitMq.Url).Host, string.Empty, string.Empty, $"Queue '{queue.Name}' contains {queue.Messages} messages");
                 }
+            }
+            catch (Exception ex)
+            {
+                await _log.WriteErrorAsync(nameof(Execute), rabbitMq.Url, ex);
             }
         }
     }
