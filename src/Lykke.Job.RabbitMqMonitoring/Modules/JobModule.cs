@@ -1,10 +1,10 @@
 ﻿using Autofac;
 using Common.Log;
 using Lykke.Job.RabbitMqMonitoring.Core.Services;
-using Lykke.Job.RabbitMqMonitoring.Core.Settings.JobSettings;
 using Lykke.Job.RabbitMqMonitoring.Services;
 using Lykke.SettingsReader;
 using Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers;
+using Lykke.Job.RabbitMqMonitoring.Settings.JobSettings;
 
 namespace Lykke.Job.RabbitMqMonitoring.Modules
 {

@@ -1,4 +1,4 @@
-﻿namespace Lykke.Job.RabbitMqMonitoring.Core.Settings.JobSettings
+﻿namespace Lykke.Job.RabbitMqMonitoring.Settings.JobSettings
 {
     public class DbSettings
     {

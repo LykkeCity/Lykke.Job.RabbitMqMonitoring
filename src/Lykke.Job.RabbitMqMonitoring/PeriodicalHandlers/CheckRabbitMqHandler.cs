@@ -4,28 +4,29 @@ using System.Linq;
 using System.Threading.Tasks;
 using Common;
 using Common.Log;
+using Lykke.Job.RabbitMqMonitoring.Core.Domain;
 using Lykke.Job.RabbitMqMonitoring.Core.Services;
-using Lykke.Job.RabbitMqMonitoring.Core.Settings.JobSettings;
+using Lykke.Job.RabbitMqMonitoring.Settings.JobSettings;
 
 namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
 {
     public class CheckRabbitMqHandler : TimerPeriod
     {
         private readonly IRabbitMqManagementService _rabbitMqManagementService;
-        private readonly RabbitMqConnection[] _rabbitMqConnections;
+        private readonly RabbitMqConnectionSettings[] _rabbitMqConnectionSettings;
         private readonly int _maxMessagesCount;
         private readonly ILog _log;
 
         public CheckRabbitMqHandler(
             IRabbitMqManagementService rabbitMqManagementService,
-            RabbitMqConnection[] rabbitMqConnections, 
+            RabbitMqConnectionSettings[] rabbitMqConnectionSettings, 
             TimeSpan checkRate, 
             int maxMessagesCount, 
             ILog log) :
             base(nameof(CheckRabbitMqHandler), (int)checkRate.TotalMilliseconds, log)
         {
             _rabbitMqManagementService = rabbitMqManagementService;
-            _rabbitMqConnections = rabbitMqConnections;
+            _rabbitMqConnectionSettings = rabbitMqConnectionSettings;
             _maxMessagesCount = maxMessagesCount;
             _log = log;
         }
@@ -34,29 +35,60 @@ namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
         {
             var tasks = new List<Task>();
 
-            foreach (var rabbitMq in _rabbitMqConnections)
+            foreach (var connectionSettings in _rabbitMqConnectionSettings)
             {
-                tasks.Add(ProcessConnection(rabbitMq));
+                tasks.Add(ProcessConnectionAsync(connectionSettings));
             }
 
             await Task.WhenAll(tasks);
         }
 
-        private async Task ProcessConnection(RabbitMqConnection rabbitMq)
+        private async Task ProcessConnectionAsync(RabbitMqConnectionSettings connectionSettings)
         {
             try
             {
-                var queues = await _rabbitMqManagementService.GetQueuesAsync(rabbitMq.Url, rabbitMq.Username, rabbitMq.Password);
+                var queues = await _rabbitMqManagementService.GetQueuesAsync(connectionSettings.Url, connectionSettings.Username, connectionSettings.Password);
 
-                foreach (var queue in queues.Where(item => item.Messages >= _maxMessagesCount))
+                foreach (var queue in queues)
                 {
-                    await _log.WriteMonitorAsync(new Uri(rabbitMq.Url).Host, string.Empty, string.Empty, $"Queue '{queue.Name}' contains {queue.Messages} messages");
+                    await ProcessQueueAsync(connectionSettings, queue);
                 }
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(Execute), rabbitMq.Url, ex);
+                await _log.WriteErrorAsync(nameof(Execute), connectionSettings.Url, ex);
             }
+        }
+
+        private async Task ProcessQueueAsync(RabbitMqConnectionSettings connectionSettings, RabbitMqQueue queue)
+        {
+            var queueSettings = TryGetQueueSettings(connectionSettings, queue);
+            var maxMessagesCount = queueSettings?.MaxMessagesCount ??
+                                   connectionSettings.MaxMessagesCount ?? 
+                                   _maxMessagesCount;
+
+            if (queue.Messages >= maxMessagesCount)
+            {
+                var title = connectionSettings.Title ?? new Uri(connectionSettings.Url).Host;
+                
+                await _log.WriteMonitorAsync(
+                    title,
+                    string.Empty,
+                    string.Empty,
+                    $"Queue '{queue.Name}' contains {queue.Messages} messages");
+            }
+        }
+
+        private static RabbitMqQueueSettings TryGetQueueSettings(RabbitMqConnectionSettings connectionSettings, RabbitMqQueue queue)
+        {
+            if (connectionSettings.Queues != null)
+            {
+                connectionSettings.Queues.TryGetValue(queue.Name, out var queueSettings);
+
+                return queueSettings;
+            }
+
+            return null;
         }
     }
 }
