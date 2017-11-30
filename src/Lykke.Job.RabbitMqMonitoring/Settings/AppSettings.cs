@@ -1,7 +1,7 @@
-﻿using Lykke.Job.RabbitMqMonitoring.Core.Settings.JobSettings;
-using Lykke.Job.RabbitMqMonitoring.Core.Settings.SlackNotifications;
+﻿using Lykke.Job.RabbitMqMonitoring.Settings.JobSettings;
+using Lykke.Job.RabbitMqMonitoring.Settings.SlackNotifications;
 
-namespace Lykke.Job.RabbitMqMonitoring.Core.Settings
+namespace Lykke.Job.RabbitMqMonitoring.Settings
 {
     public class AppSettings
     {
