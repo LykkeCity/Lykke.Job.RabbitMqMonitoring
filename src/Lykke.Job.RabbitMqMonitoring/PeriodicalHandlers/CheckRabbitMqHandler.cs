@@ -13,13 +13,13 @@ namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
     public class CheckRabbitMqHandler : TimerPeriod
     {
         private readonly IRabbitMqManagementService _rabbitMqManagementService;
-        private readonly RabbitMqConnectionSettings[] _rabbitMqConnectionSettings;
+        private readonly IReadOnlyCollection<RabbitMqConnectionSettings> _rabbitMqConnectionSettings;
         private readonly int _maxMessagesCount;
         private readonly ILog _log;
 
         public CheckRabbitMqHandler(
             IRabbitMqManagementService rabbitMqManagementService,
-            RabbitMqConnectionSettings[] rabbitMqConnectionSettings, 
+            IReadOnlyCollection<RabbitMqConnectionSettings> rabbitMqConnectionSettings, 
             TimeSpan checkRate, 
             int maxMessagesCount, 
             ILog log) :
@@ -33,12 +33,7 @@ namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
 
         public override async Task Execute()
         {
-            var tasks = new List<Task>();
-
-            foreach (var connectionSettings in _rabbitMqConnectionSettings)
-            {
-                tasks.Add(ProcessConnectionAsync(connectionSettings));
-            }
+            var tasks = _rabbitMqConnectionSettings.Select(ProcessConnectionAsync);
 
             await Task.WhenAll(tasks);
         }

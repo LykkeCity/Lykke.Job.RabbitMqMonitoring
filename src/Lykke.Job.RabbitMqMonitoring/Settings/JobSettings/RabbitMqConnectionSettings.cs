@@ -13,7 +13,7 @@ namespace Lykke.Job.RabbitMqMonitoring.Settings.JobSettings
         [Optional]
         public int? MaxMessagesCount { get; set; }
         [Optional]
-        public Dictionary<string, RabbitMqQueueSettings> Queues { get; set; }
+        public IReadOnlyDictionary<string, RabbitMqQueueSettings> Queues { get; set; }
 
     }
 }

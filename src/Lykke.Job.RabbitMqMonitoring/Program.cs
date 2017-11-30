@@ -9,7 +9,7 @@ namespace Lykke.Job.RabbitMqMonitoring
     {
         public static string EnvInfo => Environment.GetEnvironmentVariable("ENV_INFO");
 
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             Console.WriteLine($"RabbitMqMonitoring version {Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion}");
 #if DEBUG
@@ -42,13 +42,12 @@ namespace Lykke.Job.RabbitMqMonitoring
                 Console.WriteLine();
                 Console.WriteLine($"Process will be terminated in {delay}. Press any key to terminate immediately.");
 
-                Task.WhenAny(
+                await Task.WhenAny(
                         Task.Delay(delay),
                         Task.Run(() =>
                         {
                             Console.ReadKey(true);
-                        }))
-                    .Wait();
+                        }));
             }
 
             Console.WriteLine("Terminated");
