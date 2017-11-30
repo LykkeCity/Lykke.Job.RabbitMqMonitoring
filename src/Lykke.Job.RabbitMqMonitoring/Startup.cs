@@ -108,7 +108,7 @@ namespace Lykke.Job.RabbitMqMonitoring
 
                 await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
 
-                await Log.WriteMonitorAsync("", "", "Started");
+                await Log.WriteMonitorAsync("", $"ENV: {Program.EnvInfo}", "Started");
             }
             catch (Exception ex)
             {
@@ -140,12 +140,12 @@ namespace Lykke.Job.RabbitMqMonitoring
             try
             {
                 // NOTE: Job can't recieve and process IsAlive requests here, so you can destroy all resources
-                
+
                 if (Log != null)
                 {
-                    await Log.WriteMonitorAsync("", "", "Terminating");
+                    await Log.WriteMonitorAsync("", $"ENV: {Program.EnvInfo}", "Terminating");
                 }
-                
+
                 ApplicationContainer.Dispose();
             }
             catch (Exception ex)
