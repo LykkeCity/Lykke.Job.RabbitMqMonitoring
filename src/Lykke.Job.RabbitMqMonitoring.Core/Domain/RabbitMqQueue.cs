@@ -2,8 +2,8 @@
 {
     public class RabbitMqQueue
     {
-        public int Messages { get; set; }
+        public long Messages { get; set; }
         public string Name { get; set; }
-        public int Memory { get; set; }
+        public long Memory { get; set; }
     }
 }
