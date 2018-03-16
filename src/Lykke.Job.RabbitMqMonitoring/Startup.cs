@@ -11,6 +11,7 @@ using Lykke.Job.RabbitMqMonitoring.Models;
 using Lykke.Job.RabbitMqMonitoring.Modules;
 using Lykke.Job.RabbitMqMonitoring.Settings;
 using Lykke.Logs;
+using Lykke.Logs.Slack;
 using Lykke.SettingsReader;
 using Lykke.SlackNotification.AzureQueue;
 using Microsoft.AspNetCore.Builder;
@@ -86,7 +87,11 @@ namespace Lykke.Job.RabbitMqMonitoring
 
                 app.UseMvc();
                 app.UseSwagger();
-                app.UseSwaggerUi();
+                app.UseSwaggerUI(x =>
+                {
+                    x.RoutePrefix = "swagger/ui";
+                    x.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+                });
                 app.UseStaticFiles();
 
                 appLifetime.ApplicationStarted.Register(() => StartApplication().Wait());
@@ -189,10 +194,11 @@ namespace Lykke.Job.RabbitMqMonitoring
                     persistenceManager,
                     slackNotificationsManager,
                     consoleLogger);
-
                 azureStorageLogger.Start();
-
                 aggregateLogger.AddLog(azureStorageLogger);
+
+                var logToSlack = LykkeLogToSlack.Create(slackService, "RabbitMqMonitoring", LogLevel.Monitoring);
+                aggregateLogger.AddLog(logToSlack);
             }
 
             return aggregateLogger;

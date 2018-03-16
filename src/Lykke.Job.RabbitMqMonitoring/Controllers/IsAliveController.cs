@@ -1,10 +1,9 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using Lykke.Job.RabbitMqMonitoring.Core.Services;
 using Lykke.Job.RabbitMqMonitoring.Models;
-using Microsoft.AspNetCore.Mvc;
-using Swashbuckle.SwaggerGen.Annotations;
 
 namespace Lykke.Job.RabbitMqMonitoring.Controllers
 {
