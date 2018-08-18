@@ -1,10 +1,10 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.PlatformAbstractions;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using Lykke.Job.RabbitMqMonitoring.Core.Services;
 using Lykke.Job.RabbitMqMonitoring.Models;
-using Microsoft.AspNetCore.Mvc;
-using Swashbuckle.SwaggerGen.Annotations;
 
 namespace Lykke.Job.RabbitMqMonitoring.Controllers
 {
@@ -41,8 +41,8 @@ namespace Lykke.Job.RabbitMqMonitoring.Controllers
             // NOTE: Feel free to extend IsAliveResponse, to display job-specific indicators
             return Ok(new IsAliveResponse
             {
-                Name = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationName,
-                Version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion,
+                Name = PlatformServices.Default.Application.ApplicationName,
+                Version = PlatformServices.Default.Application.ApplicationVersion,
                 Env = Program.EnvInfo,
 #if DEBUG
                 IsDebug = true,
