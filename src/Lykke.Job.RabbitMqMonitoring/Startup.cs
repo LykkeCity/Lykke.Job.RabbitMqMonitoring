@@ -4,6 +4,7 @@ using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Tables;
 using Common.Log;
+using Lykke.Common;
 using Lykke.Common.ApiLibrary.Middleware;
 using Lykke.Common.ApiLibrary.Swagger;
 using Lykke.Job.RabbitMqMonitoring.Core.Services;
@@ -55,11 +56,18 @@ namespace Lykke.Job.RabbitMqMonitoring
                 });
 
                 var builder = new ContainerBuilder();
-                var appSettings = Configuration.LoadSettings<AppSettings>();
+                var settingsManager = Configuration.LoadSettings<AppSettings>();
+                var appSettings = settingsManager.CurrentValue;
 
-                Log = CreateLogWithSlack(services, appSettings);
+                Configuration.CheckDependenciesAsync(
+                    appSettings,
+                    appSettings.SlackNotifications.AzureQueue.ConnectionString,
+                    appSettings.SlackNotifications.AzureQueue.QueueName,
+                    $"{AppEnvironment.Name} {AppEnvironment.Version}");
 
-                builder.RegisterModule(new JobModule(appSettings.CurrentValue.RabbitMqMonitoringJob, appSettings.Nested(x => x.RabbitMqMonitoringJob.Db), Log));
+                Log = CreateLogWithSlack(services, settingsManager);
+
+                builder.RegisterModule(new JobModule(appSettings.RabbitMqMonitoringJob, settingsManager.Nested(x => x.RabbitMqMonitoringJob.Db), Log));
 
                 builder.Populate(services);
 
@@ -69,7 +77,7 @@ namespace Lykke.Job.RabbitMqMonitoring
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(ConfigureServices), "", ex).Wait();
+                Log?.WriteFatalError(nameof(Startup), nameof(ConfigureServices), ex);
                 throw;
             }
         }
@@ -94,13 +102,13 @@ namespace Lykke.Job.RabbitMqMonitoring
                 });
                 app.UseStaticFiles();
 
-                appLifetime.ApplicationStarted.Register(() => StartApplication().Wait());
-                appLifetime.ApplicationStopping.Register(() => StopApplication().Wait());
-                appLifetime.ApplicationStopped.Register(() => CleanUp().Wait());
+                appLifetime.ApplicationStarted.Register(() => StartApplication().GetAwaiter().GetResult());
+                appLifetime.ApplicationStopping.Register(() => StopApplication().GetAwaiter().GetResult());
+                appLifetime.ApplicationStopped.Register(CleanUp);
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(ConfigureServices), "", ex).Wait();
+                Log?.WriteFatalError(nameof(Startup), nameof(ConfigureServices), ex);
                 throw;
             }
         }
@@ -113,11 +121,11 @@ namespace Lykke.Job.RabbitMqMonitoring
 
                 await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
 
-                await Log.WriteMonitorAsync("", $"ENV: {Program.EnvInfo}", "Started");
+                Log.WriteMonitor("", $"ENV: {Program.EnvInfo}", "Started");
             }
             catch (Exception ex)
             {
-                await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
+                Log.WriteFatalError(nameof(Startup), nameof(StartApplication), ex);
                 throw;
             }
         }
@@ -132,24 +140,18 @@ namespace Lykke.Job.RabbitMqMonitoring
             }
             catch (Exception ex)
             {
-                if (Log != null)
-                {
-                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
-                }
+                Log?.WriteFatalError(nameof(Startup), nameof(StopApplication), ex);
                 throw;
             }
         }
 
-        private async Task CleanUp()
+        private void CleanUp()
         {
             try
             {
                 // NOTE: Job can't recieve and process IsAlive requests here, so you can destroy all resources
 
-                if (Log != null)
-                {
-                    await Log.WriteMonitorAsync("", $"ENV: {Program.EnvInfo}", "Terminating");
-                }
+                Log?.WriteMonitor("", $"ENV: {Program.EnvInfo}", "Terminating");
 
                 ApplicationContainer.Dispose();
             }
@@ -157,7 +159,7 @@ namespace Lykke.Job.RabbitMqMonitoring
             {
                 if (Log != null)
                 {
-                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+                    Log.WriteFatalError(nameof(Startup), nameof(CleanUp), ex);
                     (Log as IDisposable)?.Dispose();
                 }
                 throw;
@@ -196,10 +198,10 @@ namespace Lykke.Job.RabbitMqMonitoring
                     consoleLogger);
                 azureStorageLogger.Start();
                 aggregateLogger.AddLog(azureStorageLogger);
-
-                var logToSlack = LykkeLogToSlack.Create(slackService, "RabbitMqMonitoring", LogLevel.Monitoring);
-                aggregateLogger.AddLog(logToSlack);
             }
+
+            var logToSlack = LykkeLogToSlack.Create(slackService, "RabbitMqMonitoring", LogLevel.Monitoring);
+            aggregateLogger.AddLog(logToSlack);
 
             return aggregateLogger;
         }

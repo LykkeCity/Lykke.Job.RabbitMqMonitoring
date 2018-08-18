@@ -26,7 +26,7 @@ namespace Lykke.Job.RabbitMqMonitoring.Services
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(RabbitMqManagementService), nameof(GetQueuesAsync), url, ex);
+                _log.WriteError(nameof(GetQueuesAsync), url, ex);
             }
 
             return Array.Empty<RabbitMqQueue>();
