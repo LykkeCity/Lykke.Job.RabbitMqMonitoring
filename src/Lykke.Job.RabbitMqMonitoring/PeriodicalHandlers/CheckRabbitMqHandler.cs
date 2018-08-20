@@ -46,16 +46,16 @@ namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
 
                 foreach (var queue in queues)
                 {
-                    await ProcessQueueAsync(connectionSettings, queue);
+                    ProcessQueue(connectionSettings, queue);
                 }
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(Execute), connectionSettings.Url, ex);
+                _log.WriteError(nameof(Execute), connectionSettings.Url, ex);
             }
         }
 
-        private async Task ProcessQueueAsync(RabbitMqConnectionSettings connectionSettings, RabbitMqQueue queue)
+        private void ProcessQueue(RabbitMqConnectionSettings connectionSettings, RabbitMqQueue queue)
         {
             var queueSettings = TryGetQueueSettings(connectionSettings, queue);
             var maxMessagesCount = queueSettings?.MaxMessagesCount ??
@@ -66,9 +66,8 @@ namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
             {
                 var title = connectionSettings.Title ?? new Uri(connectionSettings.Url).Host;
                 
-                await _log.WriteMonitorAsync(
+                _log.WriteMonitor(
                     title,
-                    string.Empty,
                     string.Empty,
                     $"Queue '{queue.Name}' contains {queue.Messages} messages");
             }
