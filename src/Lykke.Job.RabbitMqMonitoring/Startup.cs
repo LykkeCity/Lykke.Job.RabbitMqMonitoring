@@ -95,6 +95,9 @@ namespace Lykke.Job.RabbitMqMonitoring
             {
                 for(var i = 0; i < rabbitMqConnections.Count; i++)
                 {
+                    if (rabbitMqConnections[i].Queues == null)
+                        continue;
+
                     foreach (var queue in rabbitMqConnections[i].Queues)
                     {
                         result = $"RabbitMqConnections[{i}].Queues: {queue.Key}";
