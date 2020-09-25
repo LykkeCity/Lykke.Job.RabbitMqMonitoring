@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Common;
 using Common.Log;
@@ -19,9 +20,9 @@ namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
 
         public CheckRabbitMqHandler(
             IRabbitMqManagementService rabbitMqManagementService,
-            IReadOnlyCollection<RabbitMqConnectionSettings> rabbitMqConnectionSettings, 
-            TimeSpan checkRate, 
-            int maxMessagesCount, 
+            IReadOnlyCollection<RabbitMqConnectionSettings> rabbitMqConnectionSettings,
+            TimeSpan checkRate,
+            int maxMessagesCount,
             ILog log) :
             base(nameof(CheckRabbitMqHandler), (int)checkRate.TotalMilliseconds, log)
         {
@@ -59,13 +60,13 @@ namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
         {
             var queueSettings = TryGetQueueSettings(connectionSettings, queue);
             var maxMessagesCount = queueSettings?.MaxMessagesCount ??
-                                   connectionSettings.MaxMessagesCount ?? 
+                                   connectionSettings.MaxMessagesCount ??
                                    _maxMessagesCount;
 
             if (queue.Messages >= maxMessagesCount)
             {
                 var title = connectionSettings.Title ?? new Uri(connectionSettings.Url).Host;
-                
+
                 _log.WriteMonitor(
                     title,
                     string.Empty,
@@ -79,7 +80,25 @@ namespace Lykke.Job.RabbitMqMonitoring.PeriodicalHandlers
             {
                 connectionSettings.Queues.TryGetValue(queue.Name, out var queueSettings);
 
+                if (queueSettings == null)
+                {
+                    queueSettings = CheckByRegExp(connectionSettings, queue.Name);
+                }
+
                 return queueSettings;
+            }
+
+            return null;
+        }
+
+        private static RabbitMqQueueSettings CheckByRegExp(RabbitMqConnectionSettings connectionSettings, string queueName)
+        {
+            var queueNames = connectionSettings.Queues.Keys.ToList();
+
+            foreach (var queue in queueNames)
+            {
+                if (Regex.IsMatch(queueName, queue))
+                    return connectionSettings.Queues[queue];
             }
 
             return null;

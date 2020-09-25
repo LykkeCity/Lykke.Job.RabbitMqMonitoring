@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
@@ -11,6 +14,7 @@ using Lykke.Job.RabbitMqMonitoring.Core.Services;
 using Lykke.Job.RabbitMqMonitoring.Models;
 using Lykke.Job.RabbitMqMonitoring.Modules;
 using Lykke.Job.RabbitMqMonitoring.Settings;
+using Lykke.Job.RabbitMqMonitoring.Settings.JobSettings;
 using Lykke.Logs;
 using Lykke.Logs.Slack;
 using Lykke.SettingsReader;
@@ -28,7 +32,7 @@ namespace Lykke.Job.RabbitMqMonitoring
         public IContainer ApplicationContainer { get; private set; }
         public IConfigurationRoot Configuration { get; }
         public ILog Log { get; private set; }
-        
+
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
@@ -65,6 +69,8 @@ namespace Lykke.Job.RabbitMqMonitoring
                     appSettings.SlackNotifications.AzureQueue.QueueName,
                     $"{AppEnvironment.Name} {AppEnvironment.Version}");
 
+                CheckCorrectRexEx(appSettings.RabbitMqMonitoringJob.RabbitMqConnections.ToList());
+
                 Log = CreateLogWithSlack(services, settingsManager);
 
                 builder.RegisterModule(new JobModule(appSettings.RabbitMqMonitoringJob, settingsManager.Nested(x => x.RabbitMqMonitoringJob.Db), Log));
@@ -79,6 +85,26 @@ namespace Lykke.Job.RabbitMqMonitoring
             {
                 Log?.WriteFatalError(nameof(Startup), nameof(ConfigureServices), ex);
                 throw;
+            }
+        }
+
+        private void CheckCorrectRexEx(List<RabbitMqConnectionSettings> rabbitMqConnections)
+        {
+            string result = string.Empty;
+            try
+            {
+                for(var i = 0; i < rabbitMqConnections.Count; i++)
+                {
+                    foreach (var queue in rabbitMqConnections[i].Queues)
+                    {
+                        result = $"RabbitMqConnections[{i}].Queues: {queue.Key}";
+                        Regex.IsMatch(string.Empty, queue.Key);
+                    }
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                throw new Exception($"{result} is not a valid RegEx pattern");
             }
         }
 
